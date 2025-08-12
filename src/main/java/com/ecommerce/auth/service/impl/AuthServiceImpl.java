@@ -3,8 +3,11 @@ package com.ecommerce.auth.service.impl;
 import com.ecommerce.auth.dto.LoginRequest;
 import com.ecommerce.auth.dto.LoginResponse;
 import com.ecommerce.auth.dto.RegisterRequest;
+import com.ecommerce.auth.dto.RegisterResponse;
 import com.ecommerce.auth.entity.Role;
 import com.ecommerce.auth.entity.User;
+import com.ecommerce.auth.exception.UserAlreadyExistsException;
+import com.ecommerce.auth.mapper.UserMapper;
 import com.ecommerce.auth.repository.RoleRepository;
 import com.ecommerce.auth.repository.UserRepository;
 import com.ecommerce.auth.service.AuthService;
@@ -13,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -24,8 +26,8 @@ import java.util.Set;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -43,20 +45,16 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void register(RegisterRequest registerRequest) {
+    public RegisterResponse register(RegisterRequest registerRequest) {
         if (userRepository.existsByUsername(registerRequest.getUsername())) {
-            throw new RuntimeException("Username is already taken");
+            throw new UserAlreadyExistsException("Username is already taken", "username");
         }
 
         if (userRepository.existsByEmail(registerRequest.getEmail())) {
-            throw new RuntimeException("Email is already in use");
+            throw new UserAlreadyExistsException("Email is already in use", "email");
         }
 
-        User user = User.builder()
-                .username(registerRequest.getUsername())
-                .email(registerRequest.getEmail())
-                .password(passwordEncoder.encode(registerRequest.getPassword()))
-                .build();
+        User user = userMapper.toUser(registerRequest);
 
         Role userRole = roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new RuntimeException("User Role not set"));
@@ -65,7 +63,14 @@ public class AuthServiceImpl implements AuthService {
         roles.add(userRole);
         user.setRoles(roles);
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        String token = jwtTokenProvider.generateToken(savedUser.getUsername());
+        return new RegisterResponse("User registered successfully!",
+                savedUser.getId(),
+                savedUser.getUsername(),
+                token
+        );
     }
 
     @Override

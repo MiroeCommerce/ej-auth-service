@@ -15,15 +15,7 @@ public class JwtTokenProvider {
     private final Key key;
     private final long jwtExpirationInMs;
 
-    public JwtTokenProvider(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration-ms}") long jwtExpirationInMs) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
-        this.jwtExpirationInMs = jwtExpirationInMs;
-    }
-
-    public String generateToken(Authentication authentication) {
-        String username = authentication.getName();
+    private String createTokenFromUsername(String username) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
@@ -33,6 +25,24 @@ public class JwtTokenProvider {
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public JwtTokenProvider(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.expiration-ms}") long jwtExpirationInMs) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        this.jwtExpirationInMs = jwtExpirationInMs;
+    }
+
+    // for login
+    public String generateToken(Authentication authentication) {
+        String username = authentication.getName();
+        return createTokenFromUsername(username);
+    }
+
+    // for registration
+    public String generateToken(String username) {
+        return createTokenFromUsername(username);
     }
 
     public String getUsernameFromJWT(String token) {
