@@ -16,8 +16,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -30,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserDetailsService userDetailsService;
 
     @Override
     public LoginResponse login(LoginRequest loginRequest) {
@@ -59,13 +63,11 @@ public class AuthServiceImpl implements AuthService {
         Role userRole = roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new RuntimeException("User Role not set"));
 
-        Set<Role> roles = new HashSet<>();
-        roles.add(userRole);
-        user.setRoles(roles);
-
+        user.setRoles(Collections.singleton(userRole));
         User savedUser = userRepository.save(user);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getUsername());
 
-        String token = jwtTokenProvider.generateToken(savedUser.getUsername());
+        String token = jwtTokenProvider.generateToken(userDetails);
         return new RegisterResponse("User registered successfully!",
                 savedUser.getId(),
                 savedUser.getUsername(),
