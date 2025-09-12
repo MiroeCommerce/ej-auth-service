@@ -37,6 +37,4 @@ public class AuthController {
     public ResponseEntity<String> logout() {
         return ResponseEntity.status(HttpStatus.OK).body("User logged out");
     }
-
-
 }
