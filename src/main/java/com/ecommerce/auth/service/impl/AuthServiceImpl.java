@@ -1,29 +1,22 @@
 package com.ecommerce.auth.service.impl;
 
-import com.ecommerce.auth.dto.LoginRequest;
-import com.ecommerce.auth.dto.LoginResponse;
 import com.ecommerce.auth.dto.RegisterRequest;
 import com.ecommerce.auth.dto.RegisterResponse;
 import com.ecommerce.auth.entity.Role;
 import com.ecommerce.auth.entity.User;
+import com.ecommerce.auth.exception.PasswordConfirmNotMatchException;
 import com.ecommerce.auth.exception.UserAlreadyExistsException;
 import com.ecommerce.auth.mapper.UserMapper;
 import com.ecommerce.auth.repository.RoleRepository;
 import com.ecommerce.auth.repository.UserRepository;
 import com.ecommerce.auth.service.AuthService;
-import com.ecommerce.auth.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 
+// Add Logger to Service?
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -31,25 +24,14 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final RoleRepository roleRepository;
-    private final AuthenticationManager authenticationManager;
-    private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
 
     @Override
-    public LoginResponse login(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUsername(),
-                        loginRequest.getPassword()
-                )
-        );
-
-        String token = jwtTokenProvider.generateToken(authentication);
-        return new LoginResponse(token);
-    }
-
-    @Override
     public RegisterResponse register(RegisterRequest registerRequest) {
+        if (!registerRequest.getPassword().equals(registerRequest.getConfirmPassword())) {
+            throw new PasswordConfirmNotMatchException("Passwords do not match");
+        }
+
         if (userRepository.existsByUsername(registerRequest.getUsername())) {
             throw new UserAlreadyExistsException("Username is already taken", "username");
         }
@@ -64,17 +46,18 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new RuntimeException("User Role not set"));
 
         user.setRoles(Collections.singleton(userRole));
+        user.setUserType("customer");
+        user.setIsActive(true);
+        user.setIsEmailVerified(false);
         User savedUser = userRepository.save(user);
-        UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getUsername());
 
-        String token = jwtTokenProvider.generateToken(userDetails);
         return new RegisterResponse("User registered successfully!",
                 savedUser.getId(),
-                savedUser.getUsername(),
-                token
+                savedUser.getUsername()
         );
     }
 
+    // Use Redis here
     @Override
     public void logout(String token) {
         // Optionally implement token invalidation or blacklisting here
