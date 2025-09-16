@@ -15,7 +15,6 @@ public abstract class UserMapper {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // Ignore to handle the mapping for these fields by ourselves
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "roles", ignore = true)
     @Mapping(source = "password", target = "password", ignore = true)
