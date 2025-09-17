@@ -18,6 +18,9 @@ jobs:
           distribution: temurin
           java-version: 21
 
+
       - name: Build with Gradle (skip tests)
         run: ./gradlew clean build -x test --stacktrace
 
+      - name: Run tests
+        run: ./gradlew test --stacktrace -x test --stacktrace
