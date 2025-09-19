@@ -25,8 +25,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// Transactional annotation is used to not persist the user in the Database and rolls it back automatically using DirtiesContext
-
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(locations = "classpath:application-test.properties")
@@ -43,6 +41,16 @@ class RegistrationIntegrationTest {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private RoleRepository roleRepository;
+
+    @Test
+    void whenValidInput_thenReturns200() throws Exception {
+        var request = new RegisterRequest("gooduser", "good@email.com", "password123", "password123");
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+    }
 
     @Test
     void whenRegisterUser_thenSuccess() throws Exception {
@@ -111,24 +119,14 @@ class RegistrationIntegrationTest {
 
     @Test
     void whenPasswordsDoNotMatch_thenBadRequest() throws Exception {
-        // Arrange: Create a request with mismatched passwords
+        // Arrange
         var registerRequest = new RegisterRequest("newuser", "test@example.com", "password123", "password456");
 
         // Act & Assert
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
-                .andExpect(status().isBadRequest()); // Expect 400 Bad Request
-    }
-
-    @Test
-    void whenValidInput_thenReturns200() throws Exception {
-        var request = new RegisterRequest("gooduser", "good@email.com", "password123", "password123");
-
-        mockMvc.perform(post("/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
     }
 
     @ParameterizedTest
@@ -145,6 +143,6 @@ class RegistrationIntegrationTest {
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest()); // Expect 400 Bad Request
+                .andExpect(status().isBadRequest());
     }
 }
