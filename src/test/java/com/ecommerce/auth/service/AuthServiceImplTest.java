@@ -31,7 +31,6 @@ class AuthServiceImplTest {
     private RoleRepository roleRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
-
     @Mock
     private UserMapper userMapper;
 

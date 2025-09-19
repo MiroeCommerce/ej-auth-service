@@ -7,6 +7,8 @@ import com.ecommerce.auth.repository.RoleRepository;
 import com.ecommerce.auth.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -116,6 +118,33 @@ class RegistrationIntegrationTest {
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isBadRequest()); // Expect 400 Bad Request
+    }
+
+    @Test
+    void whenValidInput_thenReturns200() throws Exception {
+        var request = new RegisterRequest("gooduser", "good@email.com", "password123", "password123");
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            ", test@email.com, password123, password123", // Blank username
+            "us, test@email.com, password123, password123", // Short username
+            "longusernameistoolong, test@email.com, password123, password123", // Long username
+            "testuser, invalid-email, password123, password123", // Invalid email
+            "testuser, test@email.com, short, short" // Short password
+    })
+    void whenInvalidInput_thenReturns400(String username, String email, String password, String confirmPassword) throws Exception {
+        var request = new RegisterRequest(username, email, password, confirmPassword);
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest()); // Expect 400 Bad Request
     }
 }
