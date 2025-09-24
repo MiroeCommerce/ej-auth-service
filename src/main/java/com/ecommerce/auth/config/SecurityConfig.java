@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.ecommerce.auth.service.impl.CustomUserDetailsService;
+import com.ecommerce.auth.service.impl.RedisOAuth2AuthorizationService;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -57,7 +57,7 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final CustomUserDetailsService customUserDetailsService;
+    private final RedisOAuth2AuthorizationService redisOAuth2AuthorizationService;
 
     @Value("${client.secret}")
     private String clientSecret;
@@ -76,6 +76,7 @@ public class SecurityConfig {
             .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
             .with(authorizationServerConfigurer,
                     (authorizationServer) -> authorizationServer.oidc(Customizer.withDefaults())	// Enable OpenID Connect 1.0
+                            .authorizationService(redisOAuth2AuthorizationService)
             )
             .authorizeHttpRequests((authorize) ->
                     authorize
@@ -100,7 +101,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers("/auth/register").permitAll()
                         .requestMatchers("/auth/login").permitAll()
-
+                        .requestMatchers("/.well-known/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(Customizer.withDefaults());
